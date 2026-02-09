@@ -1,0 +1,57 @@
+#!/bin/bash
+
+
+# Common web server usernames
+COMMON_WEB_USERS=("www-data" "apache" "nginx" "http" "www")
+
+# Detect web server user running on the system
+detect_web_user() {
+    for user in "${COMMON_WEB_USERS[@]}"; do
+        if id "$user" &>/dev/null; then
+            echo "$user"
+            return 0
+        fi
+    done
+    echo "No common web server user found." >&2
+    exit 1
+}
+
+# Get the web server user
+WEB_USER=$(detect_web_user)
+
+# Get current shell user
+CURRENT_USER=$(whoami)
+
+# Laravel root directory
+cd "$(dirname "$0")"
+
+echo "Setting ownership to $CURRENT_USER:$WEB_USER ..."
+sudo chown -R $CURRENT_USER:$WEB_USER .
+
+echo "Fixing directory permissions..."
+sudo find . -type d -exec chmod 2770 {} \;
+
+echo "Fixing file permissions..."
+sudo find . -type f -exec chmod 660 {} \;
+for link in node_modules/.bin/*; do
+    if [ -L "$link" ]; then
+        target=$(readlink -f "$link")
+        if [ -f "$target" ]; then
+            sudo chmod 770 "$target"
+        fi
+    fi
+done
+
+echo "Setting correct permissions for storage and bootstrap/cache..."
+sudo chmod -R 2770 storage bootstrap/cache
+
+echo "Setting group sticky bit..."
+sudo find storage bootstrap/cache -type d -exec chmod g+s {} \;
+
+echo "Setting correct permissions for utilities..."
+sudo chmod 770 install.sh update.sh set_permissions generate-sbom.php artisan
+
+echo "Setting correct permissions for vendor binaries..."
+sudo chmod 770 install.sh vendor/bin/*
+
+echo "Done. Ownership is $CURRENT_USER:$WEB_USER and OpenGRC permissions are set."

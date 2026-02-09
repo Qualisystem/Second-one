@@ -1,0 +1,25 @@
+version: "3.9"
+services:
+  opengrc:
+    image: yvesmayombo/opengrc-custom:1.0
+    container_name: opengrc_custom_app
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      - TZ=Africa/Libreville
+      - APP_ENV=local
+      - APP_DEBUG=true
+    volumes:
+      # Map your custom source code to the container
+      - ./:/var/www/html
+      # Preserve important data directories
+      - opengrc_data:/var/lib/opengrc
+      - opengrc_storage:/var/www/html/storage
+      - opengrc_logs:/var/www/html/storage/logs
+    working_dir: /var/www/html
+
+volumes:
+  opengrc_data:
+  opengrc_storage:
+  opengrc_logs:
